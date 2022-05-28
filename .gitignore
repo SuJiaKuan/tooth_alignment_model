@@ -159,3 +159,8 @@ Sessionx.vim
 tags
 # Persistent undo
 [._]*.un~
+
+# Default paths to generated files and directories
+/data
+/models
+/eval_experiment
