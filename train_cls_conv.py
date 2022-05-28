@@ -60,7 +60,7 @@ def main(args):
 
     '''DATA LOADING'''
     logger.info('Load dataset ...')
-    DATA_PATH = './data/modelnet40_normal_resampled/'
+    DATA_PATH = './data/tooth_300'
 
     TRAIN_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split='train', normal_channel=args.normal)
     TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split='test', normal_channel=args.normal)
@@ -76,8 +76,7 @@ def main(args):
         torch.cuda.manual_seed_all(seed)
 
     '''MODEL LOADING'''
-    num_class = 40
-    classifier = PointConvClsSsg(num_class).cuda()
+    classifier = PointConvClsSsg().cuda()
     if args.pretrain is not None:
         print('Use pretrain model...')
         logger.info('Use pretrain model')
@@ -102,7 +101,7 @@ def main(args):
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.7)
     global_epoch = 0
     global_step = 0
-    best_tst_accuracy = 0.0
+    best_test_mse = float('inf')
     blue = lambda x: '\033[94m' + x + '\033[0m'
 
     '''TRANING'''
@@ -110,47 +109,38 @@ def main(args):
     for epoch in range(start_epoch,args.epoch):
         print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
         logger.info('Epoch %d (%d/%s):' ,global_epoch + 1, epoch + 1, args.epoch)
-        mean_correct = []
+        mses = []
 
         scheduler.step()
         for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
-            points, target = data
-            points = points.data.numpy()
-            jittered_data = provider.random_scale_point_cloud(points[:,:, 0:3], scale_low=2.0/3, scale_high=3/2.0)
-            jittered_data = provider.shift_point_cloud(jittered_data, shift_range=0.2)
-            points[:, :, 0:3] = jittered_data
-            points = provider.random_point_dropout_v2(points)
-            provider.shuffle_points(points)
-            points = torch.Tensor(points)
-            target = target[:, 0]
+            tooth_points, target = data
+            tooth_points = tooth_points.data.numpy()
+            tooth_points = torch.Tensor(tooth_points)
 
-            points = points.transpose(2, 1)
-            points, target = points.cuda(), target.cuda()
+            tooth_points = tooth_points.transpose(2, 1)
+            tooth_points, target = tooth_points.cuda(), target.cuda()
             optimizer.zero_grad()
 
             classifier = classifier.train()
-            pred = classifier(points[:, :3, :], points[:, 3:, :])
-            loss = F.nll_loss(pred, target.long())
-            pred_choice = pred.data.max(1)[1]
-            correct = pred_choice.eq(target.long().data).cpu().sum()
-            mean_correct.append(correct.item() / float(points.size()[0]))
+            pred = classifier(tooth_points[:, :3, :], tooth_points[:, 3:, :])
+            loss = F.mse_loss(pred, target)
+            mses.append(loss.item())
             loss.backward()
             optimizer.step()
             global_step += 1
 
-        train_acc = np.mean(mean_correct)
-        print('Train Accuracy: %f' % train_acc)
-        logger.info('Train Accuracy: %f' % train_acc)
+        train_mse = np.mean(mses)
+        print('Train MSE: {}'.format(train_mse))
 
-        acc = test(classifier, testDataLoader)
+        test_mse = test(classifier, testDataLoader)
 
-        if (acc >= best_tst_accuracy) and epoch > 5:
-            best_tst_accuracy = acc
+        if (test_mse <= best_test_mse) and epoch > 5:
+            best_test_mse = test_mse
             logger.info('Save model...')
             save_checkpoint(
                 global_epoch + 1,
-                train_acc,
-                acc,
+                train_mse,
+                test_mse,
                 classifier,
                 optimizer,
                 str(checkpoints_dir),
@@ -159,12 +149,11 @@ def main(args):
 
         print('\r Loss: %f' % loss.data)
         logger.info('Loss: %.2f', loss.data)
-        print('\r Test %s: %f   ***  %s: %f' % (blue('Accuracy'),acc, blue('Best Accuracy'),best_tst_accuracy))
-        logger.info('Test Accuracy: %f  *** Best Test Accuracy: %f', acc, best_tst_accuracy)
-
+        print('\r Test %s: %f   ***  %s: %f' % (blue('MSE'), test_mse, blue('Best MSE'), best_test_mse))
+        logger.info('Test MSE: %f  *** Best Test MSE: %f', test_mse, best_test_mse)
 
         global_epoch += 1
-    print('Best Accuracy: %f'%best_tst_accuracy)
+    print('Best MSE: %f' % best_test_mse)
 
     logger.info('End of training...')
 

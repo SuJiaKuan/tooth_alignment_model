@@ -31,35 +31,32 @@ def show_example(x, y, x_reconstruction, y_pred,save_dir, figname):
     ax[1].set_title('Output: %d' % y_pred)
     plt.savefig(save_dir + figname + '.png')
 
-def save_checkpoint(epoch, train_accuracy, test_accuracy, model, optimizer, path,modelnet='checkpoint'):
-    savepath  = path + '/%s-%f-%04d.pth' % (modelnet,test_accuracy, epoch)
+def save_checkpoint(epoch, train_mse, test_mse, model, optimizer, path,modelnet='checkpoint'):
+    savepath  = path + '/%s-%f-%04d.pth' % (modelnet, test_mse, epoch)
     state = {
         'epoch': epoch,
-        'train_accuracy': train_accuracy,
-        'test_accuracy': test_accuracy,
+        'train_mse': train_mse,
+        'test_mse': test_mse,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
     }
     torch.save(state, savepath)
 
 def test(model, loader):
-    total_correct = 0.0
-    total_seen = 0.0
+    mses = []
     for j, data in enumerate(loader, 0):
-        points, target = data
-        target = target[:, 0]
-        points = points.transpose(2, 1)
-        points, target = points.cuda(), target.cuda()
+        tooth_points, target = data
+        tooth_points = tooth_points.transpose(2, 1)
+        tooth_points, target = tooth_points.cuda(), target.cuda()
         classifier = model.eval()
         with torch.no_grad():
-            pred = classifier(points[:, :3, :], points[:, 3:, :])
-        pred_choice = pred.data.max(1)[1]
-        correct = pred_choice.eq(target.long().data).cpu().sum()
-        total_correct += correct.item()
-        total_seen += float(points.size()[0])
+            pred = classifier(tooth_points[:, :3, :], tooth_points[:, 3:, :])
+        mse = F.mse_loss(pred, target)
+        mses.append(mse.item())
 
-    accuracy = total_correct / total_seen
-    return accuracy
+    test_mse = np.mean(mses)
+
+    return test_mse
 
 def compute_cat_iou(pred,target,iou_tabel):
     iou_list = []

@@ -1,6 +1,8 @@
 import numpy as np
 import warnings
 import os
+
+import pandas as pd
 from torch.utils.data import Dataset
 warnings.filterwarnings('ignore')
 
@@ -40,59 +42,72 @@ class ModelNetDataLoader(Dataset):
         self.npoints = npoint
         self.uniform = uniform
         self.split = split
-        self.catfile = os.path.join(self.root, 'modelnet40_shape_names.txt')
 
-        self.cat = [line.rstrip() for line in open(self.catfile)]
-        self.classes = dict(zip(self.cat, range(len(self.cat))))
         self.normal_channel = normal_channel
 
-        shape_ids = {}
-        shape_ids['train'] = [line.rstrip() for line in open(os.path.join(self.root, 'modelnet40_train.txt'))]
-        shape_ids['test'] = [line.rstrip() for line in open(os.path.join(self.root, 'modelnet40_test.txt'))]
-
         assert (split == 'train' or split == 'test')
-        shape_names = ['_'.join(x.split('_')[0:-1]) for x in shape_ids[split]]
-        # list of (shape_name, shape_txt_file_path) tuple
-        self.datapath = [(shape_names[i], os.path.join(self.root, shape_names[i], shape_ids[split][i]) + '.txt') for i
-                         in range(len(shape_ids[split]))]
-        print('The size of %s data is %d'%(split,len(self.datapath)))
+
+        self.pairs = self._make_dataset(self.root, self.split)
+
+        print('The size of {} data is {}'.format(split, len(self.pairs)))
 
         self.cache_size = cache_size  # how many data points to cache in memory
         self.cache = {}  # from index to (point_set, cls) tuple
 
     def __len__(self):
-        return len(self.datapath)
+        return len(self.pairs)
 
     def _get_item(self, index):
         if index in self.cache:
-            point_set, cls = self.cache[index]
+            tooth_point_set, label = self.cache[index]
         else:
-            fn = self.datapath[index]
-            cls = self.classes[self.datapath[index][0]]
-            cls = np.array([cls]).astype(np.int32)
-            point_set = np.loadtxt(fn[1], delimiter=',').astype(np.float32)
+            tooth_path = self.pairs[index][0]["tooth"]
+            label = self.pairs[index][1]
+
+            tooth_point_set = \
+                np.loadtxt(tooth_path, delimiter=',').astype(np.float32)
 
             if len(self.cache) < self.cache_size:
-                self.cache[index] = (point_set, cls)
+                self.cache[index] = (tooth_point_set, label)
 
         if self.uniform:
-            point_set = farthest_point_sample(point_set, self.npoints)
+            tooth_point_set = farthest_point_sample(
+                tooth_point_set,
+                self.npoints,
+            )
         else:
             if self.split == 'train':
-                train_idx = np.array(range(point_set.shape[0]))
-                point_set = point_set[train_idx[:self.npoints],:]
+                train_idx = np.array(range(tooth_point_set.shape[0]))
+                tooth_point_set = tooth_point_set[train_idx[:self.npoints], :]
             else:
-                point_set = point_set[0:self.npoints,:]
+                tooth_point_set = tooth_point_set[0:self.npoints, :]
 
-        point_set[:, 0:3] = pc_normalize(point_set[:, 0:3])
+        tooth_point_set[:, 0:3] = pc_normalize(tooth_point_set[:, 0:3])
 
         if not self.normal_channel:
-            point_set = point_set[:, 0:3]
+            tooth_point_set = tooth_point_set[:, 0:3]
 
-        return point_set, cls
+        return tooth_point_set, label
 
     def __getitem__(self, index):
         return self._get_item(index)
+
+    @staticmethod
+    def _make_dataset(root, split):
+        phase_dir = os.path.join(root, split)
+        df = pd.read_csv(os.path.join(phase_dir, 'data.csv'))
+
+        pairs = []
+        for _, row in df.iterrows():
+            jaw_path = os.path.join(phase_dir, row['jaw'])
+            tooth_path = os.path.join(phase_dir, row['tooth'])
+            label = row[2:].to_numpy().astype(np.float32)
+            pairs.append(({
+                'jaw': jaw_path,
+                'tooth': tooth_path,
+            }, label))
+
+        return pairs
 
 
 if __name__ == '__main__':

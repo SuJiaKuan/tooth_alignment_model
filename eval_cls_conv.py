@@ -1,7 +1,7 @@
 import argparse
 import os
 import sys
-import numpy as np 
+import numpy as np
 import torch
 import torch.nn.parallel
 import torch.utils.data
@@ -11,7 +11,6 @@ import datetime
 import logging
 from pathlib import Path
 from tqdm import tqdm
-from utils.utils import test, save_checkpoint
 from model.pointconv import PointConvDensityClsSsg as PointConvClsSsg
 
 
@@ -26,6 +25,7 @@ def parse_args():
     parser.add_argument('--model_name', default='pointconv', help='model name')
     parser.add_argument('--normal', action='store_true', default=False, help='Whether to use normal information [default: False]')
     return parser.parse_args()
+
 
 def main(args):
     '''HYPER PARAMETER'''
@@ -57,7 +57,7 @@ def main(args):
 
     '''DATA LOADING'''
     logger.info('Load dataset ...')
-    DATA_PATH = './data/modelnet40_normal_resampled/'
+    DATA_PATH = './data/tooth_300'
 
     TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split='test', normal_channel=args.normal)
     testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batchsize, shuffle=False, num_workers=args.num_workers)
@@ -69,45 +69,38 @@ def main(args):
         torch.cuda.manual_seed_all(seed)
 
     '''MODEL LOADING'''
-    num_class = 40
-    classifier = PointConvClsSsg(num_class).cuda()
+    classifier = PointConvClsSsg().cuda()
     if args.checkpoint is not None:
         print('Load CheckPoint...')
         logger.info('Load CheckPoint')
         checkpoint = torch.load(args.checkpoint)
-        start_epoch = checkpoint['epoch']
         classifier.load_state_dict(checkpoint['model_state_dict'])
     else:
         print('Please load Checkpoint to eval...')
         sys.exit(0)
-        start_epoch = 0
-
-    blue = lambda x: '\033[94m' + x + '\033[0m'
 
     '''EVAL'''
     logger.info('Start evaluating...')
     print('Start evaluating...')
 
     classifier = classifier.eval()
-    mean_correct = []
+    mses = []
     for batch_id, data in tqdm(enumerate(testDataLoader, 0), total=len(testDataLoader), smoothing=0.9):
-        pointcloud, target = data
-        target = target[:, 0]
+        tooth_points, target = data
+        tooth_points = tooth_points.transpose(2, 1)
+        tooth_points, target = tooth_points.cuda(), target.cuda()
 
-        points = pointcloud.permute(0, 2, 1)
-        points, target = points.cuda(), target.cuda()
         with torch.no_grad():
-            pred = classifier(points[:, :3, :], points[:, 3:, :])
-        pred_choice = pred.data.max(1)[1]
-        correct = pred_choice.eq(target.long().data).cpu().sum()
+            pred = classifier(tooth_points[:, :3, :], tooth_points[:, 3:, :])
+        mse = F.mse_loss(pred, target)
+        mses.append(mse.item())
 
-        mean_correct.append(correct.item()/float(points.size()[0]))
+    test_mse = np.mean(mses)
+    print('Test MSE {}'.format(test_mse))
 
-    accuracy = np.mean(mean_correct)
-    print('Total Accuracy: %f'%accuracy)
-
-    logger.info('Total Accuracy: %f'%accuracy)
+    logger.info('Test MSE {}'.format(test_mse))
     logger.info('End of evaluation...')
+
 
 if __name__ == '__main__':
     args = parse_args()
