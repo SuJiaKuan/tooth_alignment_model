@@ -52,42 +52,47 @@ class ModelNetDataLoader(Dataset):
         print('The size of {} data is {}'.format(split, len(self.pairs)))
 
         self.cache_size = cache_size  # how many data points to cache in memory
-        self.cache = {}  # from index to (point_set, cls) tuple
+        self.cache = {}  # from index to a data sample
 
     def __len__(self):
         return len(self.pairs)
 
     def _get_item(self, index):
         if index in self.cache:
-            tooth_point_set, label = self.cache[index]
+            tooth_points, jaw_points, label = self.cache[index]
         else:
             tooth_path = self.pairs[index][0]["tooth"]
+            jaw_path = self.pairs[index][0]["jaw"]
             label = self.pairs[index][1]
 
-            tooth_point_set = \
+            tooth_points = \
                 np.loadtxt(tooth_path, delimiter=',').astype(np.float32)
+            jaw_points = np.loadtxt(jaw_path, delimiter=',').astype(np.float32)
 
             if len(self.cache) < self.cache_size:
-                self.cache[index] = (tooth_point_set, label)
+                self.cache[index] = (tooth_points, jaw_points, label)
 
         if self.uniform:
-            tooth_point_set = farthest_point_sample(
-                tooth_point_set,
-                self.npoints,
-            )
+            tooth_points = farthest_point_sample(tooth_points, self.npoints)
+            jaw_points = farthest_point_sample(jaw_points, self.npoints)
         else:
             if self.split == 'train':
-                train_idx = np.array(range(tooth_point_set.shape[0]))
-                tooth_point_set = tooth_point_set[train_idx[:self.npoints], :]
+                train_idx = np.array(range(tooth_points.shape[0]))
+                tooth_points = tooth_points[train_idx[:self.npoints], :]
+                train_idx = np.array(range(jaw_points.shape[0]))
+                jaw_points = jaw_points[train_idx[:self.npoints], :]
             else:
-                tooth_point_set = tooth_point_set[0:self.npoints, :]
+                tooth_points = tooth_points[0:self.npoints, :]
+                jaw_points = jaw_points[0:self.npoints, :]
 
-        tooth_point_set[:, 0:3] = pc_normalize(tooth_point_set[:, 0:3])
+        tooth_points[:, 0:3] = pc_normalize(tooth_points[:, 0:3])
+        jaw_points[:, 0:3] = pc_normalize(jaw_points[:, 0:3])
 
         if not self.normal_channel:
-            tooth_point_set = tooth_point_set[:, 0:3]
+            tooth_points = tooth_points[:, 0:3]
+            jaw_points = jaw_points[:, 0:3]
 
-        return tooth_point_set, label
+        return tooth_points, jaw_points, label
 
     def __getitem__(self, index):
         return self._get_item(index)

@@ -113,16 +113,15 @@ def main(args):
 
         scheduler.step()
         for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
-            tooth_points, target = data
-            tooth_points = tooth_points.data.numpy()
-            tooth_points = torch.Tensor(tooth_points)
-
+            tooth_points, jaw_points, target = data
             tooth_points = tooth_points.transpose(2, 1)
-            tooth_points, target = tooth_points.cuda(), target.cuda()
+            jaw_points = jaw_points.transpose(2, 1)
+            tooth_points, jaw_points, target = \
+                tooth_points.cuda(), jaw_points.cuda(), target.cuda()
             optimizer.zero_grad()
 
             classifier = classifier.train()
-            pred = classifier(tooth_points[:, :3, :], tooth_points[:, 3:, :])
+            pred = classifier(tooth_points, jaw_points)
             loss = F.mse_loss(pred, target)
             mses.append(loss.item())
             loss.backward()
