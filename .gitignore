@@ -163,4 +163,5 @@ tags
 # Default paths to generated files and directories
 /data
 /models
+/experiment
 /eval_experiment
