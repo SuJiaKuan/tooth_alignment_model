@@ -85,6 +85,8 @@ def main(args):
 
     classifier = classifier.eval()
     mses = []
+    maes = []
+    sub_maes = []
     for batch_id, data in tqdm(enumerate(testDataLoader, 0), total=len(testDataLoader), smoothing=0.9):
         tooth_points, jaw_points, target = data
         tooth_points = tooth_points.transpose(2, 1)
@@ -94,13 +96,28 @@ def main(args):
 
         with torch.no_grad():
             pred = classifier(tooth_points, jaw_points)
+
         mse = F.mse_loss(pred, target)
         mses.append(mse.item())
 
+        mae = F.l1_loss(pred, target)
+        maes.append(mae.item())
+
+        sub_mae = \
+            np.mean(np.abs(pred.cpu().numpy() - target.cpu().numpy()), axis=0)
+        sub_maes.append(sub_mae)
+
     test_mse = np.mean(mses)
+    test_mae = np.mean(maes)
+    test_sub_mae = np.mean(sub_maes, axis=0)
+
     print('Test MSE {}'.format(test_mse))
+    print('Test MAE {}'.format(test_mae))
+    print('Test SUB-MAE {}'.format(test_sub_mae))
 
     logger.info('Test MSE {}'.format(test_mse))
+    logger.info('Test MAE {}'.format(test_mae))
+    logger.info('Test SUB-MAE {}'.format(test_sub_mae))
     logger.info('End of evaluation...')
 
 
