@@ -31,6 +31,11 @@ def parse_args():
     parser.add_argument('--normal', action='store_true', default=False, help='Whether to use normal information [default: False]')
     return parser.parse_args()
 
+
+def weighted_mse_loss(pred, target, weights):
+    return (weights * (pred - target) ** 2).mean()
+
+
 def main(args):
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -104,6 +109,8 @@ def main(args):
     best_test_mse = float('inf')
     blue = lambda x: '\033[94m' + x + '\033[0m'
 
+    weights = torch.Tensor([5.0, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0]).cuda()
+
     '''TRANING'''
     logger.info('Start training...')
     for epoch in range(start_epoch,args.epoch):
@@ -120,7 +127,7 @@ def main(args):
 
             classifier = classifier.train()
             pred = classifier(tooth_pcs)
-            loss = F.mse_loss(pred, target)
+            loss = weighted_mse_loss(pred, target, weights)
             mses.append(loss.item())
             loss.backward()
             optimizer.step()
