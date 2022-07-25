@@ -3,6 +3,7 @@ Classification Model
 Author: Wenxuan Wu
 Date: September 2019
 """
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import Linear
@@ -44,7 +45,10 @@ class PointConvDensityClsSsg(nn.Module):
 
         self.tooth_encoder = PointConvEncoder()
         self.fpm = FeaturePropogationModule()
-        self.fc = Linear(self.fpm.out_features, nvalues)
+        self.fcs = nn.ModuleList([
+            Linear(self.fpm.out_features, nvalues)
+            for _ in range(14)
+        ])
 
     def forward(self, tooth_pcs):
         tooth_pcs_re = tooth_pcs.reshape((
@@ -62,6 +66,9 @@ class PointConvDensityClsSsg(nn.Module):
             tooth_fea.shape[-1],
         ))
         tooth_fea = self.fpm(tooth_fea)
-        out = self.fc(tooth_fea)
+        out = torch.stack([
+            fc(tooth_fea[:, idx, :])
+            for idx, fc in enumerate(self.fcs)
+        ], dim=1)
 
         return out
