@@ -60,7 +60,7 @@ def main(args):
 
     '''DATA LOADING'''
     logger.info('Load dataset ...')
-    DATA_PATH = './data/tooth_300'
+    DATA_PATH = './data/tooth_400'
 
     TRAIN_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split='train', normal_channel=args.normal)
     TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split='test', normal_channel=args.normal)
@@ -113,15 +113,13 @@ def main(args):
 
         scheduler.step()
         for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
-            tooth_points, jaw_points, target = data
-            tooth_points = tooth_points.transpose(2, 1)
-            jaw_points = jaw_points.transpose(2, 1)
-            tooth_points, jaw_points, target = \
-                tooth_points.cuda(), jaw_points.cuda(), target.cuda()
+            tooth_pcs, target = data
+            tooth_pcs = tooth_pcs.transpose(3, 2)
+            tooth_pcs, target = tooth_pcs.cuda(), target.cuda()
             optimizer.zero_grad()
 
             classifier = classifier.train()
-            pred = classifier(tooth_points, jaw_points)
+            pred = classifier(tooth_pcs)
             loss = F.mse_loss(pred, target)
             mses.append(loss.item())
             loss.backward()

@@ -57,7 +57,7 @@ def main(args):
 
     '''DATA LOADING'''
     logger.info('Load dataset ...')
-    DATA_PATH = './data/tooth_300'
+    DATA_PATH = './data/tooth_400'
 
     TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split='test', normal_channel=args.normal)
     testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batchsize, shuffle=False, num_workers=args.num_workers)
@@ -88,14 +88,12 @@ def main(args):
     maes = []
     sub_maes = []
     for batch_id, data in tqdm(enumerate(testDataLoader, 0), total=len(testDataLoader), smoothing=0.9):
-        tooth_points, jaw_points, target = data
-        tooth_points = tooth_points.transpose(2, 1)
-        jaw_points = jaw_points.transpose(2, 1)
-        tooth_points, jaw_points, target = \
-            tooth_points.cuda(), jaw_points.cuda(), target.cuda()
+        tooth_pcs, target = data
+        tooth_pcs = tooth_pcs.transpose(3, 2)
+        tooth_pcs, target = tooth_pcs.cuda(), target.cuda()
 
         with torch.no_grad():
-            pred = classifier(tooth_points, jaw_points)
+            pred = classifier(tooth_pcs)
 
         mse = F.mse_loss(pred, target)
         mses.append(mse.item())

@@ -4,9 +4,9 @@ Author: Wenxuan Wu
 Date: September 2019
 """
 import torch.nn as nn
-import torch
-import numpy as np
 import torch.nn.functional as F
+
+from model.fpm import FeaturePropogationModule
 from utils.pointconv_util import PointConvDensitySetAbstraction
 
 
@@ -42,30 +42,25 @@ class PointConvDensityClsSsg(nn.Module):
         super(PointConvDensityClsSsg, self).__init__()
 
         self.tooth_encoder = PointConvEncoder()
-        self.jaw_encoder = PointConvEncoder()
-        self.fc = nn.Linear(2 * 256, nvalues)
+        self.fpm = FeaturePropogationModule()
+        self.fc = nn.Linear(self.fpm.out_features, nvalues)
 
-    def forward(self, tooth_points, jaw_points):
+    def forward(self, tooth_pcs):
+        tooth_pcs_re = tooth_pcs.reshape((
+            -1,
+            tooth_pcs.shape[2],
+            tooth_pcs.shape[3],
+        ))
         tooth_fea = self.tooth_encoder(
-            tooth_points[:, :3, :],
-            tooth_points[:, 3:, :],
+            tooth_pcs_re[:, :3, :],
+            tooth_pcs_re[:, 3:, :],
         )
-        jaw_fea = self.jaw_encoder(
-            jaw_points[:, :3, :],
-            jaw_points[:, 3:, :],
-        )
-        fea = torch.cat((jaw_fea, tooth_fea), dim=1)
-        out = self.fc(fea)
+        tooth_fea = tooth_fea.reshape((
+            tooth_pcs.shape[0],
+            tooth_pcs.shape[1],
+            tooth_fea.shape[-1],
+        ))
+        tooth_fea = self.fpm(tooth_fea)
+        out = self.fc(tooth_fea)
 
         return out
-
-if __name__ == '__main__':
-    import os
-    import torch
-    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-    input = torch.randn((8,3,2048))
-    label = torch.randn(8,16)
-    model = PointConvDensityClsSsg(num_classes=40)
-    output= model(input)
-    print(output.size())
-

@@ -45,14 +45,12 @@ def save_checkpoint(epoch, train_mse, test_mse, model, optimizer, path,modelnet=
 def test(model, loader):
     mses = []
     for j, data in enumerate(loader, 0):
-        tooth_points, jaw_points, target = data
-        tooth_points = tooth_points.transpose(2, 1)
-        jaw_points = jaw_points.transpose(2, 1)
-        tooth_points, jaw_points, target = \
-            tooth_points.cuda(), jaw_points.cuda(), target.cuda()
+        tooth_pcs, target = data
+        tooth_pcs = tooth_pcs.transpose(3, 2)
+        tooth_pcs, target = tooth_pcs.cuda(), target.cuda()
         classifier = model.eval()
         with torch.no_grad():
-            pred = classifier(tooth_points, jaw_points)
+            pred = classifier(tooth_pcs)
         mse = F.mse_loss(pred, target)
         mses.append(mse.item())
 
