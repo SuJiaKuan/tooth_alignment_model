@@ -5,6 +5,7 @@ Date: September 2019
 """
 import torch.nn as nn
 import torch.nn.functional as F
+from torch_geometric.nn import Linear
 
 from model.fpm import FeaturePropogationModule
 from utils.pointconv_util import PointConvDensitySetAbstraction
@@ -43,7 +44,7 @@ class PointConvDensityClsSsg(nn.Module):
 
         self.tooth_encoder = PointConvEncoder()
         self.fpm = FeaturePropogationModule()
-        self.fc = nn.Linear(self.fpm.out_features, nvalues)
+        self.fc = Linear(self.fpm.out_features, nvalues)
 
     def forward(self, tooth_pcs):
         tooth_pcs_re = tooth_pcs.reshape((
