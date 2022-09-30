@@ -88,12 +88,13 @@ def main(args):
     maes = []
     sub_maes = []
     for batch_id, data in tqdm(enumerate(testDataLoader, 0), total=len(testDataLoader), smoothing=0.9):
-        tooth_pcs, target = data
+        tooth_pcs, jaw_pc, target = data
         tooth_pcs = tooth_pcs.transpose(3, 2)
-        tooth_pcs, target = tooth_pcs.cuda(), target.cuda()
+        jaw_pc = jaw_pc.transpose(2, 1)
+        tooth_pcs, jaw_pc, target = tooth_pcs.cuda(), jaw_pc.cuda(), target.cuda()
 
         with torch.no_grad():
-            pred = classifier(tooth_pcs)
+            pred = classifier(tooth_pcs, jaw_pc)
 
         mse = F.mse_loss(pred, target)
         mses.append(mse.item())

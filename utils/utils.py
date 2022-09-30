@@ -9,6 +9,7 @@ from collections import defaultdict
 import datetime
 import pandas as pd
 import torch.nn.functional as F
+
 def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """
     new_y = torch.eye(num_classes)[y.cpu().data.numpy(),]
@@ -45,12 +46,13 @@ def save_checkpoint(epoch, train_mse, test_mse, model, optimizer, path,modelnet=
 def test(model, loader):
     mses = []
     for j, data in enumerate(loader, 0):
-        tooth_pcs, target = data
+        tooth_pcs, jaw_pc, target = data
         tooth_pcs = tooth_pcs.transpose(3, 2)
-        tooth_pcs, target = tooth_pcs.cuda(), target.cuda()
+        jaw_pc = jaw_pc.transpose(2, 1)
+        tooth_pcs, jaw_pc, target = tooth_pcs.cuda(), jaw_pc.cuda(), target.cuda()
         classifier = model.eval()
         with torch.no_grad():
-            pred = classifier(tooth_pcs)
+            pred = classifier(tooth_pcs, jaw_pc)
         mse = F.mse_loss(pred, target)
         mses.append(mse.item())
 
