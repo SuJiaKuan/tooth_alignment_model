@@ -20,6 +20,7 @@ def parse_args():
     parser = argparse.ArgumentParser('PointConv')
     parser.add_argument('data_path', type=str, help='path to dataset')
     parser.add_argument('--values', type=int, nargs='+', default=[0, 2, 3, 4, 5, 6], choices=list(range(7)), help='target values')
+    parser.add_argument('--metric', type=str, default='r2_score', choices=['mse', 'mae', 'r2_score'], help='target testing metric to decide the best checkpoint')
     parser.add_argument('--batchsize', type=int, default=32, help='batch size in training')
     parser.add_argument('--epoch',  default=400, type=int, help='number of epoch in training')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='learning rate in training')
@@ -113,7 +114,7 @@ def main(args):
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.7)
     global_epoch = 0
     global_step = 0
-    best_test_mse = float('inf')
+    best_test_score = float('-inf') if args.metric == 'r2_score' else float('inf')
 
     weights = torch.Tensor([5.0, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0]).cuda()
 
@@ -121,7 +122,6 @@ def main(args):
     logger.info('Start training...')
     for epoch in range(start_epoch,args.epoch):
         logger.info('Epoch %d (%d/%s):' ,global_epoch + 1, epoch + 1, args.epoch)
-        mses = []
 
         scheduler.step()
         for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
@@ -134,34 +134,39 @@ def main(args):
             classifier = classifier.train()
             pred = classifier(tooth_pcs, jaw_pc)
             loss = log_cosh_loss(pred, target)
-            mses.append(loss.item())
             loss.backward()
             optimizer.step()
             global_step += 1
 
-        train_mse = np.mean(mses)
-        logger.info('Train MSE: {}'.format(train_mse))
-
         test_metric = test(classifier, testDataLoader)
-        test_mse = test_metric["mse"]
 
-        if (test_mse <= best_test_mse) and epoch > 5:
-            best_test_mse = test_mse
+        test_score = test_metric[args.metric]
+        is_better = \
+            test_score >= best_test_score \
+            if args.metric == 'r2_score' \
+            else test_score <= best_test_score
+
+        if is_better and epoch > 5:
+            best_test_score = test_score
             logger.info('Save model...')
             save_checkpoint(
                 global_epoch + 1,
-                train_mse,
+                loss,
+                test_score,
                 test_metric,
                 classifier,
                 optimizer,
                 str(checkpoints_dir),
-                args.model_name)
+                args.model_name,
+            )
 
         logger.info('Loss: %.2f', loss.data)
-        logger.info('Test MSE: %f  *** Best Test MSE: %f', test_mse, best_test_mse)
+        logger.info('Test Score: %f  *** Best Test Score: %f', test_score, best_test_score)
+        logger.info('Evaluation Metrics:')
+        logger.info(test_metric)
 
         global_epoch += 1
-    logger.info('Best MSE: %f' % best_test_mse)
+    logger.info('Best Score: %f', best_test_score)
 
     logger.info('End of training...')
 

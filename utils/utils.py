@@ -33,11 +33,12 @@ def show_example(x, y, x_reconstruction, y_pred,save_dir, figname):
     ax[1].set_title('Output: %d' % y_pred)
     plt.savefig(save_dir + figname + '.png')
 
-def save_checkpoint(epoch, train_mse, test_metric, model, optimizer, path,modelnet='checkpoint'):
-    savepath  = path + '/%s-%f-%04d.pth' % (modelnet, test_metric["mse"], epoch)
+def save_checkpoint(epoch, loss, test_score, test_metric, model, optimizer, path, modelnet='checkpoint'):
+    savepath  = path + '/%s_%f_%04d.pth' % (modelnet, test_score, epoch)
     state = {
         'epoch': epoch,
-        'train_mse': train_mse,
+        'loss': loss,
+        'test_score': test_score,
         'test_metric': test_metric,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
