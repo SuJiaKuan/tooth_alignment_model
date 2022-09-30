@@ -10,8 +10,8 @@ from data_utils.ModelNetDataLoader import ModelNetDataLoader
 import datetime
 import logging
 from pathlib import Path
-from tqdm import tqdm
 from model.pointconv import PointConvDensityClsSsg as PointConvClsSsg
+from utils.utils import test
 
 
 def parse_args():
@@ -80,35 +80,10 @@ def main(args):
     logger.info('Start evaluating...')
 
     classifier = classifier.eval()
-    mses = []
-    maes = []
-    sub_maes = []
-    for batch_id, data in tqdm(enumerate(testDataLoader, 0), total=len(testDataLoader), smoothing=0.9):
-        tooth_pcs, jaw_pc, target = data
-        tooth_pcs = tooth_pcs.transpose(3, 2)
-        jaw_pc = jaw_pc.transpose(2, 1)
-        tooth_pcs, jaw_pc, target = tooth_pcs.cuda(), jaw_pc.cuda(), target.cuda()
+    test_metric = test(classifier, testDataLoader, use_tqdm=True)
 
-        with torch.no_grad():
-            pred = classifier(tooth_pcs, jaw_pc)
-
-        mse = F.mse_loss(pred, target)
-        mses.append(mse.item())
-
-        mae = F.l1_loss(pred, target)
-        maes.append(mae.item())
-
-        sub_mae = \
-            np.mean(np.abs(pred.cpu().numpy() - target.cpu().numpy()), axis=0)
-        sub_maes.append(sub_mae)
-
-    test_mse = np.mean(mses)
-    test_mae = np.mean(maes)
-    test_sub_mae = np.mean(sub_maes, axis=0)
-
-    logger.info('Test MSE {}'.format(test_mse))
-    logger.info('Test MAE {}'.format(test_mae))
-    logger.info('Test SUB-MAE {}'.format(test_sub_mae))
+    logger.info('Evaluation Metrics:')
+    logger.info(test_metric)
     logger.info('End of evaluation...')
 
 

@@ -44,11 +44,16 @@ def save_checkpoint(epoch, train_mse, test_metric, model, optimizer, path,modeln
     }
     torch.save(state, savepath)
 
-def test(model, loader):
+def test(model, loader, use_tqdm=False):
     targets = []
     preds = []
 
-    for j, data in enumerate(loader, 0):
+    iters = \
+        tqdm(enumerate(loader, 0), total=len(loader), smoothing=0.9) \
+        if use_tqdm \
+        else enumerate(loader, 0)
+
+    for j, data in iters:
         tooth_pcs, jaw_pc, target = data
         tooth_pcs = tooth_pcs.transpose(3, 2)
         jaw_pc = jaw_pc.transpose(2, 1)
