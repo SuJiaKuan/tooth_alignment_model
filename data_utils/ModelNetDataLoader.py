@@ -45,6 +45,7 @@ class ModelNetDataLoader(Dataset):
         self,
         root,
         npoint=1024,
+        ntooth=14,
         split='train',
         uniform=False,
         normal_channel=True,
@@ -52,6 +53,7 @@ class ModelNetDataLoader(Dataset):
     ):
         self.root = root
         self.npoints = npoint
+        self.ntooth = ntooth
         self.uniform = uniform
         self.split = split
 
@@ -59,7 +61,7 @@ class ModelNetDataLoader(Dataset):
 
         assert (split == 'train' or split == 'test')
 
-        self.items = self._make_dataset(self.root, self.split)
+        self.items = self._make_dataset(self.root, self.split, self.ntooth)
 
         print('The size of {} data is {}'.format(split, len(self.items)))
 
@@ -91,25 +93,43 @@ class ModelNetDataLoader(Dataset):
                 tooth_pc_ = farthest_point_sample(tooth_pc, self.npoints)
             else:
                 if self.split == 'train':
-                    train_idx = np.array(range(tooth_pc.shape[0]))
-                    tooth_pc_ = tooth_pc[train_idx[:self.npoints], :]
+                    train_idx = np.random.choice(
+                        tooth_pc.shape[0],
+                        size=min(tooth_pc.shape[0], self.npoints),
+                        replace=False,
+                    )
+                    tooth_pc_ = tooth_pc[train_idx, :]
                 else:
                     tooth_pc_ = tooth_pc[0:self.npoints, :]
 
-            tooth_pc_[:, 0:3] = pc_normalize(tooth_pc_[:, 0:3])
+            # tooth_pc_[:, 0:3] = pc_normalize(tooth_pc_[:, 0:3])
 
             if not self.normal_channel:
                 tooth_pc_ = tooth_pc_[:, 0:3]
 
             tooth_pcs_.append(tooth_pc_)
 
-        return np.array(tooth_pcs_), np.array(labels)
+        jaw_pc = np.vstack(tooth_pcs)
+        jaw_npoints = self.npoints * self.ntooth
+        if self.uniform:
+            jaw_pc_ = farthest_point_sample(jaw_pc, jaw_npoints)
+        else:
+            train_idx = np.random.choice(
+                jaw_pc.shape[0],
+                size=min(jaw_pc.shape[0], jaw_npoints),
+                replace=False,
+            )
+            jaw_pc_ = jaw_pc[train_idx, :]
+        if not self.normal_channel:
+            jaw_pc_ = jaw_pc_[:, 0:3]
+
+        return np.array(tooth_pcs_), np.array(jaw_pc_), np.array(labels)
 
     def __getitem__(self, index):
         return self._get_item(index)
 
     @staticmethod
-    def _make_dataset(root, split):
+    def _make_dataset(root, split, ntooth):
         phase_dir = os.path.join(root, split)
         df = pd.read_csv(os.path.join(phase_dir, 'data.csv'), dtype={
             "name": str,
@@ -120,7 +140,7 @@ class ModelNetDataLoader(Dataset):
         names = df['name'].unique()
         for name in names:
             # TODO (SuJiaKuan): Support both upper and lower jaws.
-            df_name = df[df['name'] == name].iloc[:14]
+            df_name = df[df['name'] == name].iloc[:ntooth]
             tooth_infos = []
             for _, row in df_name.iterrows():
                 tooth = row['tooth']

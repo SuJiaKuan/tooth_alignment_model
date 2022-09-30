@@ -14,11 +14,11 @@ from utils.pointconv_util import PointConvDensitySetAbstraction
 
 class PointConvEncoder(nn.Module):
 
-    def __init__(self, feature_dim=3):
+    def __init__(self, feature_dim=3, scale=1):
         super(PointConvEncoder, self).__init__()
 
-        self.sa1 = PointConvDensitySetAbstraction(npoint=512, nsample=32, in_channel=feature_dim + 3, mlp=[64, 64, 128], bandwidth = 0.1, group_all=False)
-        self.sa2 = PointConvDensitySetAbstraction(npoint=128, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], bandwidth = 0.2, group_all=False)
+        self.sa1 = PointConvDensitySetAbstraction(npoint=512 * scale, nsample=32 * scale, in_channel=feature_dim + 3, mlp=[64, 64, 128], bandwidth = 0.1, group_all=False)
+        self.sa2 = PointConvDensitySetAbstraction(npoint=128 * scale, nsample=64 * scale, in_channel=128 + 3, mlp=[128, 128, 256], bandwidth = 0.2, group_all=False)
         self.sa3 = PointConvDensitySetAbstraction(npoint=1, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], bandwidth = 0.4, group_all=True)
         self.fc1 = nn.Linear(1024, 512)
         self.bn1 = nn.BatchNorm1d(512)
@@ -44,13 +44,14 @@ class PointConvDensityClsSsg(nn.Module):
         super(PointConvDensityClsSsg, self).__init__()
 
         self.tooth_encoder = PointConvEncoder()
+        self.jaw_encoder = PointConvEncoder(scale=4)
         self.fpm = FeaturePropogationModule()
         self.fcs = nn.ModuleList([
             Linear(self.fpm.out_features, nvalues)
             for _ in range(14)
         ])
 
-    def forward(self, tooth_pcs):
+    def forward(self, tooth_pcs, jaw_pc):
         tooth_pcs_re = tooth_pcs.reshape((
             -1,
             tooth_pcs.shape[2],
@@ -65,7 +66,11 @@ class PointConvDensityClsSsg(nn.Module):
             tooth_pcs.shape[1],
             tooth_fea.shape[-1],
         ))
-        tooth_fea = self.fpm(tooth_fea)
+
+        jaw_fea = self.jaw_encoder(jaw_pc[:, :3, :], jaw_pc[:, 3:, :])
+        tooth_fea = torch.cat((tooth_fea, jaw_fea.unsqueeze(1)), dim=1)
+        tooth_fea_fpm = self.fpm(tooth_fea)
+        tooth_fea = tooth_fea + tooth_fea_fpm
         out = torch.stack([
             fc(tooth_fea[:, idx, :])
             for idx, fc in enumerate(self.fcs)

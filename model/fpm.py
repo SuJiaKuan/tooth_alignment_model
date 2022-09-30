@@ -19,6 +19,7 @@ TEETH = [
     "2.5",
     "2.6",
     "2.7",
+    "jaw",
 ]
 TOOTH2NODE = {tooth: node for node, tooth in enumerate(TEETH)}
 
@@ -52,7 +53,27 @@ def create_fpm_graph():
         ["1.7", "2.7"],
     ]
 
-    all_edge_pairs = adjacent_edge_pairs + symmetric_edge_pairs
+    jaw_edge_pairs = [
+        ["jaw", "1.7"],
+        ["jaw", "1.6"],
+        ["jaw", "1.5"],
+        ["jaw", "1.4"],
+        ["jaw", "1.3"],
+        ["jaw", "1.2"],
+        ["jaw", "1.1"],
+        ["jaw", "2.1"],
+        ["jaw", "2.2"],
+        ["jaw", "2.3"],
+        ["jaw", "2.4"],
+        ["jaw", "2.5"],
+        ["jaw", "2.6"],
+        ["jaw", "2.7"],
+    ]
+
+    all_edge_pairs = \
+        adjacent_edge_pairs \
+        + symmetric_edge_pairs \
+        + jaw_edge_pairs
 
     # Add edges.
     for source, target in all_edge_pairs:
@@ -67,14 +88,14 @@ def create_fpm_graph():
 
 class FeaturePropogationModule(torch.nn.Module):
 
-    def __init__(self, in_features=256, out_features=64):
+    def __init__(self, in_features=256, out_features=256):
         super().__init__()
 
         self.in_features = in_features
         self.out_features = out_features
 
-        self.conv1 = GCNConv(256, 128)
-        self.conv2 = GCNConv(128, 64)
+        self.conv1 = GCNConv(256, 256)
+        self.conv2 = GCNConv(256, 256)
 
         self.edge_index = self._create_edge_index()
 
@@ -89,19 +110,10 @@ class FeaturePropogationModule(torch.nn.Module):
 
     def forward(self, fea):
         edge_index = self.edge_index.to(fea.device)
-        '''
-        data = Data(x=fea, edge_index=self.edge_index)
 
-        x, edge_index = data.x, data.edge_index
-        print(fea.device)
-        print(x.device)
-        print(edge_index.device)
-        print(self.edge_index.device)
-        '''
-
-        x = self.conv1(fea, edge_index)
+        x = torch.stack([self.conv1(fea_, edge_index) for fea_ in fea], dim=0)
         x = F.relu(x)
         x = F.dropout(x, p=0.2, training=self.training)
-        x = self.conv2(x, edge_index)
+        x = torch.stack([self.conv2(x_, edge_index) for x_ in x], dim=0)
 
         return x

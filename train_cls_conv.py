@@ -126,13 +126,14 @@ def main(args):
 
         scheduler.step()
         for batch_id, data in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
-            tooth_pcs, target = data
+            tooth_pcs, jaw_pc, target = data
             tooth_pcs = tooth_pcs.transpose(3, 2)
-            tooth_pcs, target = tooth_pcs.cuda(), target.cuda()
+            jaw_pc = jaw_pc.transpose(2, 1)
+            tooth_pcs, jaw_pc, target = tooth_pcs.cuda(), jaw_pc.cuda(), target.cuda()
             optimizer.zero_grad()
 
             classifier = classifier.train()
-            pred = classifier(tooth_pcs)
+            pred = classifier(tooth_pcs, jaw_pc)
             loss = log_cosh_loss(pred, target)
             mses.append(loss.item())
             loss.backward()
