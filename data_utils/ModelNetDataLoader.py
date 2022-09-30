@@ -44,6 +44,7 @@ class ModelNetDataLoader(Dataset):
     def __init__(
         self,
         root,
+        values,
         npoint=1024,
         ntooth=14,
         split='train',
@@ -52,6 +53,7 @@ class ModelNetDataLoader(Dataset):
         cache_size=15000,
     ):
         self.root = root
+        self.values = values
         self.npoints = npoint
         self.ntooth = ntooth
         self.uniform = uniform
@@ -61,7 +63,12 @@ class ModelNetDataLoader(Dataset):
 
         assert (split == 'train' or split == 'test')
 
-        self.items = self._make_dataset(self.root, self.split, self.ntooth)
+        self.items = self._make_dataset(
+            self.root,
+            self.split,
+            self.ntooth,
+            self.values,
+        )
 
         print('The size of {} data is {}'.format(split, len(self.items)))
 
@@ -129,7 +136,7 @@ class ModelNetDataLoader(Dataset):
         return self._get_item(index)
 
     @staticmethod
-    def _make_dataset(root, split, ntooth):
+    def _make_dataset(root, split, ntooth, values):
         phase_dir = os.path.join(root, split)
         df = pd.read_csv(os.path.join(phase_dir, 'data.csv'), dtype={
             "name": str,
@@ -148,7 +155,8 @@ class ModelNetDataLoader(Dataset):
                     phase_dir,
                     name, "{}.txt".format(tooth),
                 )
-                label = row[2:].to_numpy().astype(np.float32)
+                row_values = row[2:].to_numpy().astype(np.float32)
+                label = row_values[values]
 
                 tooth_infos.append((tooth, filepath, label))
 

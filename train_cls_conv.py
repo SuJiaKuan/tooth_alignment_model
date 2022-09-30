@@ -19,6 +19,7 @@ def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser('PointConv')
     parser.add_argument('data_path', type=str, help='path to dataset')
+    parser.add_argument('--values', type=int, nargs='+', default=[0, 2, 3, 4, 5, 6], choices=list(range(7)), help='target values')
     parser.add_argument('--batchsize', type=int, default=32, help='batch size in training')
     parser.add_argument('--epoch',  default=400, type=int, help='number of epoch in training')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='learning rate in training')
@@ -73,8 +74,8 @@ def main(args):
     '''DATA LOADING'''
     logger.info('Load dataset ...')
 
-    train_dataset = ModelNetDataLoader(root=args.data_path, npoint=args.num_point, split='train', normal_channel=args.normal)
-    test_dataset = ModelNetDataLoader(root=args.data_path, npoint=args.num_point, split='test', normal_channel=args.normal)
+    train_dataset = ModelNetDataLoader(args.data_path, args.values, npoint=args.num_point, split='train', normal_channel=args.normal)
+    test_dataset = ModelNetDataLoader(args.data_path, args.values, npoint=args.num_point, split='test', normal_channel=args.normal)
     trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchsize, shuffle=True, num_workers=args.num_workers)
     testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchsize, shuffle=False, num_workers=args.num_workers)
 
@@ -87,7 +88,7 @@ def main(args):
         torch.cuda.manual_seed_all(seed)
 
     '''MODEL LOADING'''
-    classifier = PointConvClsSsg().cuda()
+    classifier = PointConvClsSsg(len(args.values)).cuda()
     if args.pretrain is not None:
         print('Use pretrain model...')
         logger.info('Use pretrain model')

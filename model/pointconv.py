@@ -40,7 +40,7 @@ class PointConvEncoder(nn.Module):
 
 
 class PointConvDensityClsSsg(nn.Module):
-    def __init__(self, nvalues=7, ntooth=14, sep_enc=False):
+    def __init__(self, nvalues, ntooth=14, sep_enc=False):
         super(PointConvDensityClsSsg, self).__init__()
 
         self.nvalues = nvalues
