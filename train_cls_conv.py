@@ -144,7 +144,8 @@ def main(args):
         train_mse = np.mean(mses)
         print('Train MSE: {}'.format(train_mse))
 
-        test_mse = test(classifier, testDataLoader)
+        test_metric = test(classifier, testDataLoader)
+        test_mse = test_metric["mse"]
 
         if (test_mse <= best_test_mse) and epoch > 5:
             best_test_mse = test_mse
@@ -152,7 +153,7 @@ def main(args):
             save_checkpoint(
                 global_epoch + 1,
                 train_mse,
-                test_mse,
+                test_metric,
                 classifier,
                 optimizer,
                 str(checkpoints_dir),

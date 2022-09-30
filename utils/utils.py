@@ -32,12 +32,12 @@ def show_example(x, y, x_reconstruction, y_pred,save_dir, figname):
     ax[1].set_title('Output: %d' % y_pred)
     plt.savefig(save_dir + figname + '.png')
 
-def save_checkpoint(epoch, train_mse, test_mse, model, optimizer, path,modelnet='checkpoint'):
-    savepath  = path + '/%s-%f-%04d.pth' % (modelnet, test_mse, epoch)
+def save_checkpoint(epoch, train_mse, test_metric, model, optimizer, path,modelnet='checkpoint'):
+    savepath  = path + '/%s-%f-%04d.pth' % (modelnet, test_metric["mse"], epoch)
     state = {
         'epoch': epoch,
         'train_mse': train_mse,
-        'test_mse': test_mse,
+        'test_metric': test_metric,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
     }
@@ -62,9 +62,15 @@ def test(model, loader):
     preds = torch.cat(preds)
     targets = torch.cat(targets)
 
-    test_mse = F.mse_loss(preds, targets)
+    mse = F.mse_loss(preds, targets)
+    mae = F.l1_loss(pred, target)
 
-    return test_mse
+    metric = {
+        "mse": mse,
+        "mae": mae,
+    }
+
+    return metric
 
 def compute_cat_iou(pred,target,iou_tabel):
     iou_list = []
