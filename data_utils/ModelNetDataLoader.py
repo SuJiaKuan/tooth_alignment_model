@@ -46,7 +46,7 @@ class ModelNetDataLoader(Dataset):
         root,
         values,
         npoint=1024,
-        ntooth=14,
+        ntooth=28,
         split='train',
         uniform=False,
         normal_channel=True,
@@ -117,7 +117,7 @@ class ModelNetDataLoader(Dataset):
             tooth_pcs_.append(tooth_pc_)
 
         jaw_pc = np.vstack(tooth_pcs)
-        jaw_npoints = self.npoints * self.ntooth
+        jaw_npoints = int((self.npoints * self.ntooth) / 7)
         if self.uniform:
             jaw_pc_ = farthest_point_sample(jaw_pc, jaw_npoints)
         else:
@@ -146,7 +146,6 @@ class ModelNetDataLoader(Dataset):
         items = []
         names = df['name'].unique()
         for name in names:
-            # TODO (SuJiaKuan): Support both upper and lower jaws.
             df_name = df[df['name'] == name].iloc[:ntooth]
             tooth_infos = []
             for _, row in df_name.iterrows():

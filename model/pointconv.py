@@ -40,7 +40,7 @@ class PointConvEncoder(nn.Module):
 
 
 class PointConvDensityClsSsg(nn.Module):
-    def __init__(self, nvalues, ntooth=14, sep_enc=False):
+    def __init__(self, nvalues, ntooth=28, sep_enc=False):
         super(PointConvDensityClsSsg, self).__init__()
 
         self.nvalues = nvalues
@@ -54,7 +54,7 @@ class PointConvDensityClsSsg(nn.Module):
             ])
         else:
             self.tooth_encoder= PointConvEncoder()
-        self.jaw_encoder = PointConvEncoder(scale=4)
+        self.jaw_encoder = PointConvEncoder(scale=2)
         self.fpm = FeaturePropogationModule()
         self.fcs = nn.ModuleList([
             Linear(self.fpm.out_features, self.nvalues)
