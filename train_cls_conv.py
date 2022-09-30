@@ -18,6 +18,7 @@ import numpy as np
 def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser('PointConv')
+    parser.add_argument('data_path', type=str, help='path to dataset')
     parser.add_argument('--batchsize', type=int, default=32, help='batch size in training')
     parser.add_argument('--epoch',  default=400, type=int, help='number of epoch in training')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='learning rate in training')
@@ -71,15 +72,14 @@ def main(args):
 
     '''DATA LOADING'''
     logger.info('Load dataset ...')
-    DATA_PATH = './data/tooth_400'
 
-    TRAIN_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split='train', normal_channel=args.normal)
-    TEST_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.num_point, split='test', normal_channel=args.normal)
-    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batchsize, shuffle=True, num_workers=args.num_workers)
-    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batchsize, shuffle=False, num_workers=args.num_workers)
+    train_dataset = ModelNetDataLoader(root=args.data_path, npoint=args.num_point, split='train', normal_channel=args.normal)
+    test_dataset = ModelNetDataLoader(root=args.data_path, npoint=args.num_point, split='test', normal_channel=args.normal)
+    trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchsize, shuffle=True, num_workers=args.num_workers)
+    testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchsize, shuffle=False, num_workers=args.num_workers)
 
-    logger.info("The number of training data is: %d", len(TRAIN_DATASET))
-    logger.info("The number of test data is: %d", len(TEST_DATASET))
+    logger.info("The number of training data is: %d", len(train_dataset))
+    logger.info("The number of test data is: %d", len(test_dataset))
 
     seed = 3
     torch.manual_seed(seed)
