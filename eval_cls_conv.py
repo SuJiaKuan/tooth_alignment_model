@@ -53,6 +53,7 @@ def main(args):
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+    logger.addHandler(logging.StreamHandler())
     logger.info('---------------------------------------------------EVAL---------------------------------------------------')
     logger.info('PARAMETER ...')
     logger.info(args)
@@ -70,19 +71,13 @@ def main(args):
         torch.cuda.manual_seed_all(seed)
 
     '''MODEL LOADING'''
+    logger.info('Load CheckPoint')
     classifier = PointConvClsSsg(len(args.values)).cuda()
-    if args.checkpoint is not None:
-        print('Load CheckPoint...')
-        logger.info('Load CheckPoint')
-        checkpoint = torch.load(args.checkpoint)
-        classifier.load_state_dict(checkpoint['model_state_dict'])
-    else:
-        print('Please load Checkpoint to eval...')
-        sys.exit(0)
+    checkpoint = torch.load(args.checkpoint)
+    classifier.load_state_dict(checkpoint['model_state_dict'])
 
     '''EVAL'''
     logger.info('Start evaluating...')
-    print('Start evaluating...')
 
     classifier = classifier.eval()
     mses = []
@@ -110,10 +105,6 @@ def main(args):
     test_mse = np.mean(mses)
     test_mae = np.mean(maes)
     test_sub_mae = np.mean(sub_maes, axis=0)
-
-    print('Test MSE {}'.format(test_mse))
-    print('Test MAE {}'.format(test_mae))
-    print('Test SUB-MAE {}'.format(test_sub_mae))
 
     logger.info('Test MSE {}'.format(test_mse))
     logger.info('Test MAE {}'.format(test_mae))
