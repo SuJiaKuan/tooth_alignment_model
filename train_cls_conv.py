@@ -46,6 +46,8 @@ def log_cosh_loss(pred, target):
 
 
 def main(args):
+    torch.autograd.set_detect_anomaly(True)
+
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
@@ -141,7 +143,7 @@ def main(args):
 
             classifier = classifier.train()
             pred = classifier(tooth_pcs, jaw_pc)
-            loss = log_cosh_loss(pred, target)
+            loss = F.mse_loss(pred, target)
             loss.backward()
             optimizer.step()
             global_step += 1
