@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
+from torch_geometric.nn import GATConv
 from torch_geometric.data import Data
 
 
@@ -88,14 +89,24 @@ def create_fpm_graph():
 
 class FeaturePropogationModule(torch.nn.Module):
 
-    def __init__(self, in_features=256, out_features=256):
+    def __init__(self, in_features=256, out_features=256, conv="gat"):
         super().__init__()
 
         self.in_features = in_features
         self.out_features = out_features
+        self.conv = conv
 
-        self.conv1 = GCNConv(256, 256)
-        self.conv2 = GCNConv(256, 256)
+        if self.conv == "gat":
+            self.conv_class = GATConv
+        elif self.conv == "gcn":
+            self.conv_class = GCNConv
+        else:
+            raise ValueError(
+                "Non-Supported graph convolution: {}".format(self.conv),
+            )
+
+        self.conv1 = self.conv_class(256, 256)
+        self.conv2 = self.conv_class(256, 256)
 
         self.edge_index = self._create_edge_index()
 

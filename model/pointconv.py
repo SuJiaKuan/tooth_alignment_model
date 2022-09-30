@@ -40,32 +40,49 @@ class PointConvEncoder(nn.Module):
 
 
 class PointConvDensityClsSsg(nn.Module):
-    def __init__(self, nvalues=7):
+    def __init__(self, nvalues=7, ntooth=14, sep_enc=False):
         super(PointConvDensityClsSsg, self).__init__()
 
-        self.tooth_encoder = PointConvEncoder()
+        self.nvalues = nvalues
+        self.ntooth = ntooth
+        self.sep_enc = sep_enc
+
+        if self.sep_enc:
+            self.tooth_encoders = nn.ModuleList([
+                PointConvEncoder()
+                for _ in range(self.ntooth)
+            ])
+        else:
+            self.tooth_encoder= PointConvEncoder()
         self.jaw_encoder = PointConvEncoder(scale=4)
         self.fpm = FeaturePropogationModule()
         self.fcs = nn.ModuleList([
-            Linear(self.fpm.out_features, nvalues)
-            for _ in range(14)
+            Linear(self.fpm.out_features, self.nvalues)
+            for _ in range(self.ntooth)
         ])
 
     def forward(self, tooth_pcs, jaw_pc):
-        tooth_pcs_re = tooth_pcs.reshape((
-            -1,
-            tooth_pcs.shape[2],
-            tooth_pcs.shape[3],
-        ))
-        tooth_fea = self.tooth_encoder(
-            tooth_pcs_re[:, :3, :],
-            tooth_pcs_re[:, 3:, :],
-        )
-        tooth_fea = tooth_fea.reshape((
-            tooth_pcs.shape[0],
-            tooth_pcs.shape[1],
-            tooth_fea.shape[-1],
-        ))
+        if self.sep_enc:
+            tooth_fea = [self.tooth_encoders[idx](
+                tooth_pcs[:, idx, :3, :],
+                tooth_pcs[:, idx, 3:, :],
+            ) for idx in range(tooth_pcs.shape[1])]
+            tooth_fea = torch.stack(tooth_fea, dim=1)
+        else:
+            tooth_pcs_re = tooth_pcs.reshape((
+                -1,
+                tooth_pcs.shape[2],
+                tooth_pcs.shape[3],
+            ))
+            tooth_fea = self.tooth_encoder(
+                tooth_pcs_re[:, :3, :],
+                tooth_pcs_re[:, 3:, :],
+            )
+            tooth_fea = tooth_fea.reshape((
+                tooth_pcs.shape[0],
+                tooth_pcs.shape[1],
+                tooth_fea.shape[-1],
+            ))
 
         jaw_fea = self.jaw_encoder(jaw_pc[:, :3, :], jaw_pc[:, 3:, :])
         tooth_fea = torch.cat((tooth_fea, jaw_fea.unsqueeze(1)), dim=1)
