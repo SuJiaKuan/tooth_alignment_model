@@ -67,6 +67,7 @@ def main(args):
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+    logger.addHandler(logging.StreamHandler())
     logger.info('---------------------------------------------------TRANING---------------------------------------------------')
     logger.info('PARAMETER ...')
     logger.info(args)
@@ -90,13 +91,12 @@ def main(args):
     '''MODEL LOADING'''
     classifier = PointConvClsSsg(len(args.values)).cuda()
     if args.pretrain is not None:
-        print('Use pretrain model...')
         logger.info('Use pretrain model')
         checkpoint = torch.load(args.pretrain)
         start_epoch = checkpoint['epoch']
         classifier.load_state_dict(checkpoint['model_state_dict'])
     else:
-        print('No existing model, starting training from scratch...')
+        logger.info('No existing model, starting training from scratch...')
         start_epoch = 0
 
 
@@ -114,14 +114,12 @@ def main(args):
     global_epoch = 0
     global_step = 0
     best_test_mse = float('inf')
-    blue = lambda x: '\033[94m' + x + '\033[0m'
 
     weights = torch.Tensor([5.0, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0]).cuda()
 
     '''TRANING'''
     logger.info('Start training...')
     for epoch in range(start_epoch,args.epoch):
-        print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
         logger.info('Epoch %d (%d/%s):' ,global_epoch + 1, epoch + 1, args.epoch)
         mses = []
 
@@ -142,7 +140,7 @@ def main(args):
             global_step += 1
 
         train_mse = np.mean(mses)
-        print('Train MSE: {}'.format(train_mse))
+        logger.info('Train MSE: {}'.format(train_mse))
 
         test_metric = test(classifier, testDataLoader)
         test_mse = test_metric["mse"]
@@ -158,15 +156,12 @@ def main(args):
                 optimizer,
                 str(checkpoints_dir),
                 args.model_name)
-            print('Saving model....')
 
-        print('\r Loss: %f' % loss.data)
         logger.info('Loss: %.2f', loss.data)
-        print('\r Test %s: %f   ***  %s: %f' % (blue('MSE'), test_mse, blue('Best MSE'), best_test_mse))
         logger.info('Test MSE: %f  *** Best Test MSE: %f', test_mse, best_test_mse)
 
         global_epoch += 1
-    print('Best MSE: %f' % best_test_mse)
+    logger.info('Best MSE: %f' % best_test_mse)
 
     logger.info('End of training...')
 
