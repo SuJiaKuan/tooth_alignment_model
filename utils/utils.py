@@ -9,6 +9,7 @@ from collections import defaultdict
 import datetime
 import pandas as pd
 import torch.nn.functional as F
+import torchmetrics
 
 def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """
@@ -62,12 +63,17 @@ def test(model, loader):
     preds = torch.cat(preds)
     targets = torch.cat(targets)
 
-    mse = F.mse_loss(preds, targets)
-    mae = F.l1_loss(pred, target)
+    mse = F.mse_loss(preds, targets).item()
+    mae = F.l1_loss(pred, target).item()
+    r2_score = torchmetrics.functional.r2_score(
+        torch.flatten(preds),
+        torch.flatten(targets),
+    ).item()
 
     metric = {
         "mse": mse,
         "mae": mae,
+        "r2_score": r2_score,
     }
 
     return metric
