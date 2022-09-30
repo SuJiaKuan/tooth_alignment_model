@@ -36,6 +36,12 @@ def weighted_mse_loss(pred, target, weights):
     return (weights * (pred - target) ** 2).mean()
 
 
+def log_cosh_loss(pred, target):
+    ey_t = pred - target
+
+    return torch.mean(torch.log(torch.cosh(ey_t + 1e-12)))
+
+
 def main(args):
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -127,7 +133,7 @@ def main(args):
 
             classifier = classifier.train()
             pred = classifier(tooth_pcs)
-            loss = weighted_mse_loss(pred, target, weights)
+            loss = log_cosh_loss(pred, target)
             mses.append(loss.item())
             loss.backward()
             optimizer.step()
