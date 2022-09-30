@@ -70,7 +70,7 @@ def main(args):
         torch.cuda.manual_seed_all(seed)
 
     '''MODEL LOADING'''
-    classifier = PointConvClsSsg(values).cuda()
+    classifier = PointConvClsSsg(len(args.values)).cuda()
     if args.checkpoint is not None:
         print('Load CheckPoint...')
         logger.info('Load CheckPoint')
