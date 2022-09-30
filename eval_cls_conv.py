@@ -18,10 +18,10 @@ def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser('PointConv')
     parser.add_argument('data_path', type=str, help='path to dataset')
+    parser.add_argument('checkpoint', type=str, help='checkpoint')
     parser.add_argument('--values', type=int, nargs='+', default=[0, 2, 3, 4, 5, 6], choices=list(range(7)), help='target values')
     parser.add_argument('--batchsize', type=int, default=32, help='batch size')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
-    parser.add_argument('--checkpoint', type=str, default=None, help='checkpoint')
     parser.add_argument('--num_point', type=int, default=1024, help='Point Number [default: 1024]')
     parser.add_argument('--num_workers', type=int, default=16, help='Worker Number [default: 16]')
     parser.add_argument('--model_name', default='pointconv', help='model name')
