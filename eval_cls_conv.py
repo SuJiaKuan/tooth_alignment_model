@@ -80,7 +80,7 @@ def main(args):
     logger.info('Start evaluating...')
 
     classifier = classifier.eval()
-    test_metric = test(classifier, testDataLoader, use_tqdm=True)
+    test_metric = test(classifier, testDataLoader)
 
     logger.info('Evaluation Metrics:')
     logger.info(test_metric)

@@ -45,7 +45,7 @@ def save_checkpoint(epoch, loss, test_score, test_metric, model, optimizer, path
     }
     torch.save(state, savepath)
 
-def test(model, loader, use_tqdm=False):
+def test(model, loader, use_tqdm=True):
     targets = []
     preds = []
 
