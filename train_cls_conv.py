@@ -12,7 +12,7 @@ from tqdm import tqdm
 from utils.utils import test, save_checkpoint
 from model.pointconv import PointConvDensityClsSsg as PointConvClsSsg
 import provider
-import numpy as np 
+import numpy as np
 
 
 def parse_args():
@@ -21,12 +21,12 @@ def parse_args():
     parser.add_argument('data_path', type=str, help='path to dataset')
     parser.add_argument('--values', type=int, nargs='+', default=[0, 2, 3, 4, 5, 6], choices=list(range(7)), help='target values')
     parser.add_argument('--metric', type=str, default='r2_score', choices=['mse', 'mae', 'r2_score'], help='target testing metric to decide the best checkpoint')
-    parser.add_argument('--batchsize', type=int, default=32, help='batch size in training')
-    parser.add_argument('--epoch',  default=400, type=int, help='number of epoch in training')
+    parser.add_argument('--batchsize', type=int, default=8, help='batch size in training')
+    parser.add_argument('--epoch',  default=300, type=int, help='number of epoch in training')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='learning rate in training')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
     parser.add_argument('--num_point', type=int, default=1024, help='Point Number [default: 1024]')
-    parser.add_argument('--num_workers', type=int, default=16, help='Worker Number [default: 16]')
+    parser.add_argument('--num_workers', type=int, default=4, help='Worker Number [default: 4]')
     parser.add_argument('--optimizer', type=str, default='AdamW', choices=['SGD', 'Adam', 'AdamW'], help='optimizer for training')
     parser.add_argument('--pretrain', type=str, default=None,help='whether use pretrain model')
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='decay rate of learning rate')
