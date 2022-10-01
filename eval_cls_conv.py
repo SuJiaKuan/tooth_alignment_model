@@ -13,6 +13,7 @@ import logging
 from pathlib import Path
 from model.pointconv import PointConvDensityClsSsg as PointConvClsSsg
 from utils.utils import test
+from utils.utils import save_json
 
 
 def parse_args():
@@ -85,6 +86,8 @@ def main(args):
         auc_curve_path=os.path.join(file_dir, "auc_curve.png"),
         tooth_wise=args.tooth_wise,
     )
+
+    save_json(os.path.join(file_dir, "metric.json"), test_metric)
 
     logger.info('Evaluation Metrics:')
     logger.info(json.dumps(test_metric, indent=2))

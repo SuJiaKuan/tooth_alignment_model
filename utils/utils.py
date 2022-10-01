@@ -1,5 +1,6 @@
 # *_*coding:utf-8 *_*
 import os
+import json
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -12,6 +13,11 @@ import seaborn as sns
 import torch.nn.functional as F
 import torchmetrics
 from matplotlib import pyplot as plt
+
+
+def save_json(output_path, data, indent=2):
+    with open(output_path, "w") as f:
+        json.dump(data, f, indent=indent)
 
 def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """
