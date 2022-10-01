@@ -80,12 +80,13 @@ def load_data(data_dir, npoints, normal_channel, ntooth=28, uniform=False):
     if uniform:
         jaw_pc_ = farthest_point_sample(jaw_pc, jaw_npoints)
     else:
-        train_idx = np.random.choice(
-            jaw_pc.shape[0],
-            size=min(jaw_pc.shape[0], jaw_npoints),
-            replace=False,
-        )
-        jaw_pc_ = jaw_pc[train_idx, :]
+        tooth_npoints_lst = [int(jaw_npoints / ntooth)] * ntooth
+        tooth_npoints_lst[-1] += jaw_npoints % ntooth
+        jaw_pc_ = np.vstack([
+            tooth_pc[0:tooth_npoints, :]
+            for tooth_pc, tooth_npoints
+            in zip(tooth_pcs, tooth_npoints_lst)
+        ])
     if not normal_channel:
         jaw_pc_ = jaw_pc_[:, 0:3]
 
