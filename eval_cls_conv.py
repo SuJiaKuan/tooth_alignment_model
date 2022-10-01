@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 import numpy as np
@@ -27,6 +28,7 @@ def parse_args():
     parser.add_argument('--num_workers', type=int, default=4, help='Worker Number [default: 4]')
     parser.add_argument('--model_name', default='pointconv', help='model name')
     parser.add_argument('--normal', action='store_true', default=False, help='Whether to use normal information [default: False]')
+    parser.add_argument('--tooth_wise', action='store_true', default=False, help='Whether to use tooth-wise metric calculation')
     return parser.parse_args()
 
 
@@ -86,10 +88,11 @@ def main(args):
         testDataLoader,
         auc_max_thresh=args.auc_max_thresh,
         auc_curve_path=os.path.join(file_dir, "auc_curve.png"),
+        tooth_wise=args.tooth_wise,
     )
 
     logger.info('Evaluation Metrics:')
-    logger.info(test_metric)
+    logger.info(json.dumps(test_metric, indent=2))
     logger.info('End of evaluation...')
 
 

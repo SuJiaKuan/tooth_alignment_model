@@ -88,6 +88,7 @@ def test(
     loader,
     auc_max_thresh=None,
     auc_curve_path=None,
+    tooth_wise=False,
     use_tqdm=True,
 ):
     targets = []
@@ -126,17 +127,46 @@ def test(
         "r2_score": r2_score,
     }
 
+    if tooth_wise:
+        mses = []
+        maes = []
+        r2_scores = []
+        for tooth_idx in range(preds.shape[1]):
+            tooth_preds = preds[:, tooth_idx, :]
+            tooth_targets = targets[:, tooth_idx, :]
+            mses.append(F.mse_loss(tooth_preds, tooth_targets).item())
+            maes.append(F.l1_loss(tooth_preds, tooth_targets).item())
+            r2_scores.append(torchmetrics.functional.r2_score(
+                torch.flatten(tooth_preds),
+                torch.flatten(tooth_targets),
+            ).item())
+
+        metric.update({
+            "mse_tooth": mses,
+            "mae_tooth": maes,
+            "r2_score_tooth": r2_scores,
+        })
+
     if auc_max_thresh is not None:
-        auc, (threshs, accs) = calc_auc(
-            preds.detach().cpu().numpy(),
-            targets.detach().cpu().numpy(),
-            auc_max_thresh,
-        )
+        preds = preds.detach().cpu().numpy()
+        targets = targets.detach().cpu().numpy()
+        auc, (threshs, accs) = calc_auc(preds, targets, auc_max_thresh)
 
         metric["auc"] = auc
 
         if auc_curve_path is not None:
             plot_auc_curve(threshs, accs, auc_curve_path)
+
+        if tooth_wise:
+            aucs = []
+            for tooth_idx in range(preds.shape[1]):
+                tooth_preds = preds[:, tooth_idx, :]
+                tooth_targets = targets[:, tooth_idx, :]
+                aucs.append(
+                    calc_auc(tooth_preds, tooth_targets, auc_max_thresh)[0],
+                )
+
+        metric["auc_tooth"] = aucs
 
     return metric
 
