@@ -19,6 +19,7 @@ def parse_args():
     parser = argparse.ArgumentParser('PointConv')
     parser.add_argument('data_path', type=str, help='path to dataset')
     parser.add_argument('checkpoint', type=str, help='checkpoint')
+    parser.add_argument('auc_max_thresh', type=int, help='maximum threshold for AUC calculation')
     parser.add_argument('--values', type=int, nargs='+', default=[0, 2, 3, 4, 5, 6], choices=list(range(7)), help='target values')
     parser.add_argument('--batchsize', type=int, default=8, help='batch size')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
@@ -80,7 +81,12 @@ def main(args):
     logger.info('Start evaluating...')
 
     classifier = classifier.eval()
-    test_metric = test(classifier, testDataLoader)
+    test_metric = test(
+        classifier,
+        testDataLoader,
+        auc_max_thresh=args.auc_max_thresh,
+        auc_curve_path=os.path.join(file_dir, "auc_curve.png"),
+    )
 
     logger.info('Evaluation Metrics:')
     logger.info(test_metric)

@@ -8,8 +8,10 @@ from tqdm import tqdm
 from collections import defaultdict
 import datetime
 import pandas as pd
+import seaborn as sns
 import torch.nn.functional as F
 import torchmetrics
+from matplotlib import pyplot as plt
 
 def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """
@@ -45,7 +47,49 @@ def save_checkpoint(epoch, loss, test_score, test_metric, model, optimizer, path
     }
     torch.save(state, savepath)
 
-def test(model, loader, use_tqdm=True):
+def calc_acc(preds, targets, thresh):
+    pred_values = preds.flatten()
+    target_values = targets.flatten()
+    diff_values = np.absolute(pred_values, target_values)
+
+    num_correct = np.sum(diff_values <= thresh)
+    num_total = pred_values.shape[0]
+    acc = num_correct / num_total
+
+    return acc
+
+def calc_auc(preds, targets, max_thresh, num_splits=100):
+    threshs = list(np.arange(0, max_thresh, max_thresh / num_splits))
+    accs = [calc_acc(preds, targets, thresh) for thresh in threshs]
+    auc = sum(accs) / num_splits
+
+    return auc, (threshs, accs)
+
+def plot_auc_curve(
+    threshs,
+    accs,
+    output_path,
+    x_label="Error",
+    y_label="Correction ratio, %",
+):
+    df = pd.DataFrame({
+        x_label: threshs,
+        y_label: accs,
+    })
+
+    sns.set_theme(style="darkgrid")
+    sns.lineplot(data=df, x=x_label, y=y_label)
+
+    plt.savefig(output_path)
+    plt.show()
+
+def test(
+    model,
+    loader,
+    auc_max_thresh=None,
+    auc_curve_path=None,
+    use_tqdm=True,
+):
     targets = []
     preds = []
 
@@ -81,6 +125,18 @@ def test(model, loader, use_tqdm=True):
         "mae": mae,
         "r2_score": r2_score,
     }
+
+    if auc_max_thresh is not None:
+        auc, (threshs, accs) = calc_auc(
+            preds.detach().cpu().numpy(),
+            targets.detach().cpu().numpy(),
+            auc_max_thresh,
+        )
+
+        metric["auc"] = auc
+
+        if auc_curve_path is not None:
+            plot_auc_curve(threshs, accs, auc_curve_path)
 
     return metric
 
