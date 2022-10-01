@@ -166,7 +166,7 @@ def test(
                     calc_auc(tooth_preds, tooth_targets, auc_max_thresh)[0],
                 )
 
-        metric["auc_tooth"] = aucs
+            metric["auc_tooth"] = aucs
 
     return metric
 
