@@ -82,6 +82,8 @@ def main(args):
     test_metric = test(
         classifier,
         testDataLoader,
+        preds_path=os.path.join(file_dir, "preds.npy"),
+        targets_path=os.path.join(file_dir, "targets.npy"),
         auc_max_thresh=args.auc_max_thresh,
         auc_curve_path=os.path.join(file_dir, "auc_curve.png"),
         tooth_wise=args.tooth_wise,

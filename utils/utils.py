@@ -92,6 +92,8 @@ def plot_auc_curve(
 def test(
     model,
     loader,
+    preds_path=None,
+    targets_path=None,
     auc_max_thresh=None,
     auc_curve_path=None,
     tooth_wise=False,
@@ -153,9 +155,15 @@ def test(
             "r2_score_tooth": r2_scores,
         })
 
+    preds = preds.detach().cpu().numpy()
+    targets = targets.detach().cpu().numpy()
+
+    if preds_path is not None:
+        np.save(preds_path, preds)
+    if targets_path is not None:
+        np.save(targets_path, targets)
+
     if auc_max_thresh is not None:
-        preds = preds.detach().cpu().numpy()
-        targets = targets.detach().cpu().numpy()
         auc, (threshs, accs) = calc_auc(preds, targets, auc_max_thresh)
 
         metric["auc"] = auc
